@@ -103,7 +103,7 @@ async function validateCard() {
         if(error.message === "duplicate")
             {displayError("Card number already exist")}
         else{
-            displayError("Something went wrong, try Again")
+            displayError(error.message)
             console.error('Validation error:', error); 
         }
     } finally {
