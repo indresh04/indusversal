@@ -100,8 +100,12 @@ async function validateCard() {
         }
         
     } catch (error) {
-        displayError(error.message); 
-    // console.error('Validation error:', error); 
+        if(error.message === "duplicate")
+            {displayError("Card number already exist")}
+        else{
+            displayError("Something went wrong, try Again")
+            console.error('Validation error:', error); 
+        }
     } finally {
         button.disabled = false;
         button.textContent = "Validate Card";
