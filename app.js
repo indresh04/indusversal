@@ -391,65 +391,64 @@ app.post('/verifyOTP', async (req, res) => {
 });
 
 app.post('/validateCard', async (req, res) => {
-  console.log('Received request to /validateCard',req.session);
-  console.log('Received sessiond',req.session.phone);
+  console.log('Received request to /validateCard', req.session);
 
   const { cardNumber, cvv, expiryDate } = req.body;
-  console.log("received data", req.body)
+
+  // Input Validation
   const numberValidation = valid.number(cardNumber);
-    console.log('npm_validation',cardNumber,numberValidation)
-    if (!numberValidation.isPotentiallyValid) {
-        return res.json({ valid: false, error: 'Invalid card number format' });
-    }
-    else if (!numberValidation.isValid) {
-        return res.json({ valid: false, error: 'Invalid card number' });
-    }
+  if (!numberValidation.isValid) {
+    return res.json({ valid: false, error: numberValidation.isPotentiallyValid 
+                                           ? 'Invalid card number' 
+                                           : 'Invalid card number format' }); 
+  }
 
   try {
-      let card_number = cardNumber;
-      console.log('Checking existence of card:', card_number);
-      let result = await User.exists({ 'cards.cardNumber': card_number });
-      console.log("Already exist ", result);
-      
-      if (result != null){
-          console.log('Card already exists, responding with error');
-          return res.json({ valid: false, error: 'duplicate' });
-      }
-  } catch (error) {
-      console.error("Error finding card in database:", error);
-      return res.status(500).send("An error occurred while fetching card details.");
-  }
-  // if (req.session.userData) { 
-  //   const userData = req.session.userData;
-  //   console.log("userdatafromsession",userData)
-  //   console.log("phone",userData.phone)
-  // }
+    // Check for Duplicate Card (with Timeout)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Database query timeout')), 5000); // 5-second timeout
+    });
 
-  if (req.session.userData) {
-    const userData = req.session.userData;
-    console.log("userdatafromsession",userData)
-    console.log("phone",userData.phone)
-    
-    let phone = userData.phone;
-    console.log('Updating user with phone:', phone);
-    try {
-        const user = await User.findOneAndUpdate(
-            { phone },
-            { $push: { cards: { cardNumber, cvv, expiryDate } } },
-            { new: true } 
-        );
-        if (user) {
-            console.log('Card successfully added to user:', user);
-            res.json({ valid: true });
-          } else {
-            console.log('User not found, responding with error');
-            res.json({ valid: false, error: 'User not found' });
-          }
-        } catch (error) {
-          console.error('Error saving card to MongoDB:', error);
-          res.json({ valid: false, error: 'Error saving card details' });
-        }
-      }
+    const existsPromise = User.exists({ 'cards.cardNumber': cardNumber });
+    const result = await Promise.race([existsPromise, timeoutPromise]); 
+
+    if (result) {
+      return res.json({ valid: false, error: 'duplicate' });
+    }
+
+  } catch (error) {
+    console.error("Error checking card existence:", error.message); // Log the error message
+    if (error.message === 'Database query timeout') {
+      return res.status(503).json({ valid: false, error: 'Service unavailable' });
+    } else {
+      return res.status(500).json({ valid: false, error: 'Internal server error' });
+    }
+  }
+
+  // User Data Check and Card Saving
+  if (!req.session.userData) {
+    return res.json({ valid: false, error: 'User session not found' }); 
+  }
+
+  const userData = req.session.userData;
+  const phone = userData.phone;
+
+  try {
+    const user = await User.findOneAndUpdate(
+      { phone },
+      { $push: { cards: { cardNumber, cvv, expiryDate } } },
+      { new: true }
+    );
+
+    if (user) {
+      res.json({ valid: true });
+    } else {
+      res.json({ valid: false, error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error saving card:', error.message);  // Log the error message
+    res.json({ valid: false, error: 'Error saving card details' });
+  }
 });
 
 
