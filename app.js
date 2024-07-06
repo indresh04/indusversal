@@ -413,7 +413,7 @@ app.post('/validateCard', async (req, res) => {
       
       if (result != null){
           console.log('Card already exists, responding with error');
-          return res.json({ valid: false, error: 'Card number already exist' });
+          return res.json({ valid: false, error: 'duplicate' });
       }
   } catch (error) {
       console.error("Error finding card in database:", error);
