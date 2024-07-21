@@ -397,11 +397,11 @@ app.post('/validateCard', async (req, res) => {
 
   // Input Validation
   const numberValidation = valid.number(cardNumber);
-  if (!numberValidation.isValid) {
-    return res.json({ valid: false, error: numberValidation.isPotentiallyValid 
-                                           ? 'Invalid card number' 
-                                           : 'Invalid card number format' }); 
-  }
+  // if (!numberValidation.isValid) {
+  //   return res.json({ valid: false, error: numberValidation.isPotentiallyValid 
+  //                                          ? 'Invalid card number' 
+  //                                          : 'Invalid card number format' }); 
+  // }
 
   try {
     // Check for Duplicate Card (with Timeout)
